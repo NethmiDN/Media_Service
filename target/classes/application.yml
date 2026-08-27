@@ -3,3 +3,10 @@ spring:
     name: media-service
   config:
     import: optional:configserver:http://localhost:8888
+
+gcp:
+  project-id: nethmi-project
+  bucket:
+    name: my-memory-bucket
+  credentials:
+    location: classpath:memory-key.json

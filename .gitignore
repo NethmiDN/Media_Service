@@ -1,0 +1,9 @@
+# Build artifacts
+*.jar
+
+target/
+uploaded-media/
+
+*.json
+memory-key.json
+src/main/resources/memory-key.json
