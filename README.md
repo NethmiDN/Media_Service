@@ -1,30 +1,94 @@
 # Media Service
 
-A Spring Boot microservice for uploading media files directly to Google Cloud Storage (GCS) and persisting media metadata in MySQL.
+A cloud-native media management microservice for the enterprise platform, designed to upload files to Google Cloud Storage (GCS), persist metadata in MySQL, and integrate with the core Spring Cloud infrastructure for service discovery and centralized configuration.
 
-## Overview
+## Project Information
 
-This service exposes REST endpoints for:
+| Field | Details |
+| :--- | :--- |
+| Student Name | Nethmi Nanayakkara |
+| Student ID | 241722047 |
+| GCP Project ID | `nethmi-project` |
+| Module | ITS 2130 - Enterprise Cloud Architecture |
+| Repository Type | Media Storage Microservice |
+| Service Role | File Upload, Metadata Storage, and Media Retrieval |
 
-- uploading media to GCS
-- storing metadata in the database
-- retrieving media by media ID or event ID
-- deleting media from GCS and the database
+## Architectural Overview
 
-It is intended to act as a reusable media component inside a larger distributed application architecture.
+This service is a core platform component within the broader enterprise microservice ecosystem. It is designed to work alongside the API Gateway, Config Server, and Eureka Server to provide a scalable, distributed backend infrastructure.
 
-## Tech Stack
+```text
+Client / Browser
+        |
+        v
+[External Load Balancer]
+        |
+        v
+[API Gateway :8080]
+        |
+        +--> [Media Service :8081]
+        |
+        +--> [Other Platform Services]
+
+[Media Service]
+  - Uploads files to GCS
+  - Stores metadata in MySQL
+  - Registers with Eureka
+  - Loads runtime config from Config Server
+```
+
+## Service Role
+
+The Media Service is responsible for:
+
+- uploading media files to Google Cloud Storage
+- persisting media metadata in a relational database
+- retrieving media content by ID or event ID
+- deleting media files and associated metadata
+- exposing health and operational status for platform monitoring
+
+This service acts as the storage and media-processing boundary for the platform, supporting event-driven and API-driven application workflows.
+
+## Technology Stack
 
 - Java 21
-- Spring Boot 3.4.3
+- Spring Boot 3.4.x
 - Spring Web
 - Spring Data JPA
-- Spring Boot Actuator
+- Spring Validation
 - MySQL
+- Google Cloud Storage via Spring Cloud GCP
 - Spring Cloud Netflix Eureka Client
 - Spring Cloud Config Client
-- Google Cloud Storage via Spring Cloud GCP
 - Maven
+
+## Runtime Configuration
+
+The service is configured through `src/main/resources/application.yml`:
+
+```yaml
+spring:
+  application:
+    name: media-service
+  config:
+    import: optional:configserver:http://localhost:8888
+
+gcp:
+  project-id: nethmi-project
+  bucket:
+    name: my-memory-bucket
+  credentials:
+    location: classpath:memory-key.json
+```
+
+### Required dependencies
+
+- Google Cloud project with Cloud Storage enabled
+- GCS bucket named `my-memory-bucket` or a configured replacement bucket
+- Service account credentials file at `src/main/resources/memory-key.json`
+- MySQL database instance for metadata persistence
+- Spring Cloud Config Server running on `http://localhost:8888`
+- Eureka Server available for service registration and discovery
 
 ## Project Structure
 
@@ -49,49 +113,23 @@ media-service/
 ├── mvnw
 ├── mvnw.cmd
 ├── uploaded-media/
+├── target/
 └── README.md
 ```
 
-## Features
+## Core Features
 
-- Upload a file to GCS and return persisted metadata
-- Store photo metadata in the `photos` table
-- Retrieve media by `id`
-- Retrieve media by `eventId`
-- Delete media by database ID
-- Expose actuator health status
-- Global exception handling for storage and validation errors
-
-## Configuration
-
-The application configuration is defined in [src/main/resources/application.yml](src/main/resources/application.yml):
-
-```yaml
-spring:
-  application:
-    name: media-service
-  config:
-    import: optional:configserver:http://localhost:8888
-
-gcp:
-  project-id: nethmi-project
-  bucket:
-    name: my-memory-bucket
-  credentials:
-    location: classpath:memory-key.json
-```
-
-### Required setup
-
-- A Google Cloud project with Cloud Storage enabled
-- A GCS bucket named `my-memory-bucket` or an updated bucket name in config
-- A service account JSON key at `src/main/resources/memory-key.json`
-- A MySQL database for JPA metadata storage
-- Optional Spring Cloud Config Server running at `http://localhost:8888`
+- upload multimedia files to Google Cloud Storage
+- store file metadata in the `photos` table
+- retrieve media by `id`
+- retrieve media by `eventId`
+- delete stored metadata and cloud object
+- expose actuator health status for monitoring
+- handle storage and validation exceptions globally
 
 ## Database Model
 
-Metadata is stored in the `photos` table using the `PhotoMetadata` entity.
+The service stores media metadata in the `photos` table using the `PhotoMetadata` entity.
 
 Fields include:
 
@@ -103,11 +141,13 @@ Fields include:
 - `contentType`
 - `uploadedAt`
 
-## Running the Service
+## Cloning and Local Setup
 
-### Using Maven
+Clone the repository and run it locally with Maven:
 
 ```bash
+git clone https://github.com/NethmiDN/media-service.git
+cd media-service
 ./mvnw clean install
 ./mvnw spring-boot:run
 ```
@@ -119,7 +159,16 @@ mvnw.cmd clean install
 mvnw.cmd spring-boot:run
 ```
 
-The app starts on port `8080` unless configured otherwise.
+The service is expected to register with the platform discovery layer and fetch configuration from the Config Server before startup.
+
+## Deployment Topology
+
+- API Gateway routes external requests to the service
+- Media Service runs behind the platform gateway boundary
+- Google Cloud Storage stores uploaded media objects
+- MySQL persists media metadata and access records
+- Eureka maintains runtime service registration
+- Config Server provides centralized runtime properties
 
 ## API Endpoints
 
@@ -134,8 +183,8 @@ POST /api/media/upload
 Form-data parameters:
 
 - `file` - multipart file
-- `userId` - optional long value
-- `eventId` - optional string value
+- `userId` - optional numeric user identifier
+- `eventId` - optional event identifier
 
 Example:
 
@@ -172,8 +221,6 @@ GET /actuator/health
 
 ## Example Response
 
-Successful upload:
-
 ```json
 {
   "id": 1,
@@ -188,10 +235,11 @@ Successful upload:
 
 ## Notes
 
-- The application uses Spring Cloud Config with an optional remote config server.
-- Google credentials are loaded from `classpath:memory-key.json` by default.
-- The `uploaded-media` folder appears to be a local working directory for uploaded content, but the primary storage backend is GCS.
+- This service is intended to operate as part of a larger distributed Spring Cloud platform.
+- The primary storage backend is Google Cloud Storage, not the local `uploaded-media` directory.
+- Local file storage is mainly used for development or temporary working content.
+- The application depends on the platform infrastructure services for service discovery and configuration at runtime.
 
 ## License
 
-This project does not currently declare a formal license in the repository.
+This repository does not currently declare a formal software license.
